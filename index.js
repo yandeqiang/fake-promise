@@ -41,6 +41,46 @@ function _h(promise, deferred) {
 }
 
 class Promise {
+  // 借鉴于 https://github.com/taylorhakes/promise-polyfill/blob/master/src/index.js#L150
+  static all(promises) {
+    return new Promise((resolve, reject) => {
+      let tmp = promises.length;
+      promises.forEach(item => {
+        const then = item.then;
+        if(typeof then === 'function') {
+          then.call(
+            item,
+            () => {
+              tmp--;
+              if(tmp === 0) resolve();
+            },
+            reject
+          )
+        }
+      })
+    })
+  }
+
+  static race(promises) {
+    return new Promise((resolve, reject) => {
+      promises.forEach(item => {
+        item.then(resolve, reject);
+      })
+    })
+  }
+
+  static resolve(value) {
+    return new Promise((resolve, reject) => {
+      resolve(value);
+    })
+  }
+
+  static reject(value) {
+    return new Promise((resolve, reject) => {
+      reject(value);
+    })
+  }
+
   constructor (fn) {
     this._fn = fn
     this._defered = []
@@ -95,7 +135,7 @@ class Promise {
     this._handle()
   }
 
-  _handle () {
+  _handle (...args) {
     this._defered.forEach(item => {
       const cb = this._state === 1 ? item.onResolved : item.onRejected
       cb && cb.apply(null, args)
@@ -105,19 +145,43 @@ class Promise {
 }
 
 // base-demo
-const foo = new Promise(function(resolve){
-  console.log(1)
-  resolve('next')
-})
-foo.then(_ => {
-  console.log(_, 1)
-}).catch(e => {
-  console.log(e)
+// const foo = new Promise(function(resolve){
+//   console.log(1)
+//   resolve('next')
+// })
+// foo.then(_ => {
+//   console.log(_, 1)
+// }).catch(e => {
+//   console.log(e)
+// })
+
+// foo.then(_ => {
+//   console.log(_, 3)
+//   return 3
+// }).then(_ => {
+//   console.log(_, 4)
+// })
+
+Promise.all([Promise.resolve(1), Promise.reject(1)]).then(() => {
+  console.log('all, resolve')
+}, (e) => {
+  console.log('all, reject')
 })
 
-foo.then(_ => {
-  console.log(_, 3)
-  return 3
-}).then(_ => {
-  console.log(_, 4)
+Promise.all([Promise.resolve(1), Promise.resolve(1)]).then(() => {
+  console.log('demo2, all, resolve')
+}, (e) => {
+  console.log('demo2, all, reject')
+})
+
+Promise.race([Promise.resolve(1), Promise.reject(1)]).then(() => {
+  console.log('race, resolve')
+}, (e) => {
+  console.log('race, reject')
+})
+
+Promise.race([Promise.reject(1), Promise.resolve(1)]).then(() => {
+  console.log('demo2, race, resolve')
+}, (e) => {
+  console.log('demo2, race, reject')
 })
